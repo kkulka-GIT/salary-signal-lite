@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Anonimowy eksperyment statystyczny do określania rozrzutu wynagrodzeń">
+  <title>Salary Signal Lite</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--ink:#17213b;--muted:#5f6b7c;--blue:#3157d5;--line:#dbe1eb;--ok:#16784a}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,sans-serif}
+    header{padding:1.25rem max(1rem,calc((100% - 920px)/2));color:#fff;background:#17213b}.brand{margin:0 0 1rem;font-size:1.35rem}
+    nav{display:flex;flex-wrap:wrap;gap:.5rem}nav button{padding:.55rem .8rem;border:1px solid #59637b;border-radius:99px;color:#e4e9f8;background:transparent;cursor:pointer}
+    nav button.active,nav button:hover,nav button:focus-visible{color:var(--ink);background:#fff;outline:0}
+    main,footer{width:min(920px,calc(100% - 2rem));margin:2rem auto}.panel{display:none;padding:clamp(1.25rem,4vw,2.25rem);border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 10px 28px #1c2b4814}.panel.active{display:block}
+    h1,h2{margin-top:0;line-height:1.2}h1{font-size:clamp(1.9rem,6vw,3rem)}h2{font-size:1.65rem}h3{margin-bottom:.25rem}.lead,footer{color:var(--muted)}
+    .notice,.message{margin-top:1.25rem;padding:1rem;border-left:4px solid var(--blue);border-radius:8px;background:#eef2ff}
+    form{max-width:34rem}label{display:block;margin:1rem 0 .4rem;font-weight:650}input{width:100%;padding:.78rem;border:1px solid #aeb8c8;border-radius:8px;font:inherit}input:focus{border-color:var(--blue);outline:3px solid #dbe3ff}
+    .primary,.secondary{margin-top:1rem;padding:.75rem 1rem;border-radius:8px;font:650 1rem system-ui;cursor:pointer}.primary{border:0;color:#fff;background:var(--blue)}.secondary{border:1px solid #aebdf4;color:#2443ab;background:#f3f5ff}
+    .group{margin-top:1.25rem;padding:1rem;border:1px solid var(--line);border-radius:10px}.group p{margin:.35rem 0;overflow-wrap:anywhere}code{padding:.15rem .35rem;border-radius:5px;background:#edf0f5}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1.5rem}.stat{padding:1rem;text-align:center;border:1px solid var(--line);border-radius:10px}.stat strong{display:block;font-size:1.4rem}.stat span{color:var(--muted);font-size:.9rem}.feedback{min-height:1.5rem;color:var(--ok)}[hidden]{display:none!important}
+    @media(max-width:620px){main{margin-top:1rem}.stats{grid-template-columns:1fr}nav{gap:.35rem}nav button{padding:.5rem .65rem;font-size:.9rem}}
+  </style>
+</head>
+<body>
+  <header><p class="brand"><strong>Salary Signal</strong> Lite</p><nav aria-label="Główna nawigacja">
+    <button data-target="start" class="active">Start</button><button data-target="create">Utwórz grupę</button>
+    <button data-target="submit" data-group-only>Dodaj dane</button><button data-target="results" data-group-only>Wyniki</button>
+    <button data-target="transparency">Transparentność</button>
+  </nav></header>
+  <main>
+    <section id="start" class="panel active"><h1>Zobacz sygnał, nie pojedyncze pensje</h1><p class="lead">Anonimowy eksperyment statystyczny do określania rozrzutu wynagrodzeń</p><div class="notice"><strong>Nie zbieramy danych osobowych.</strong><br>Token identyfikuje grupę, nie użytkownika.</div></section>
+    <section id="create" class="panel"><h2>Utwórz grupę</h2><p class="lead">Nadaj grupie neutralny opis, np. „Frontend, mid, Warszawa”.</p>
+      <form id="create-form"><label for="description">Opis grupy</label><input id="description" maxlength="120" required placeholder="Np. Analitycy danych, senior"><button class="primary">Utwórz grupę</button></form>
+      <div id="created" class="group" hidden aria-live="polite"><p><strong>Token:</strong> <code id="created-token"></code></p><p><strong>Opis:</strong> <span id="created-description"></span></p><p><strong>Link:</strong> <a id="created-link"></a></p><button id="copy" class="secondary">Kopiuj link</button><p id="copy-feedback" class="feedback" role="status"></p></div>
+    </section>
+    <section id="submit" class="panel"><h2>Dodaj dane</h2><div class="group"><p><strong>Grupa:</strong> <span data-description></span></p><p><strong>Token:</strong> <code data-token></code></p></div>
+      <form id="data-form"><label for="deviation">Odchylenie wynagrodzenia (PLN)</label><input id="deviation" type="number" min="-2000" max="2000" step="1" required placeholder="Od -2000 do 2000"><button class="primary">Wyślij</button><p id="submit-feedback" class="feedback" role="status"></p></form>
+    </section>
+    <section id="results" class="panel"><h2>Wyniki</h2><p>Grupa: <strong data-description></strong> · <code data-token></code></p><div class="stats" aria-live="polite"><div class="stat"><strong id="count">0</strong><span>Liczba wpisów</span></div><div class="stat"><strong id="median">—</strong><span>Mediana</span></div><div class="stat"><strong id="range">—</strong><span>Widełki Q1–Q3</span></div></div><div class="message"><strong id="status">Za mało danych</strong></div></section>
+    <section id="transparency" class="panel"><h2>Transparentność</h2><h3>Co zapisujemy?</h3><p>Wpis zawiera token grupy, liczbowe odchylenie i znacznik czasu. W MVP dane istnieją tylko w pamięci otwartej karty i znikają po odświeżeniu.</p><h3>Czego nie zapisujemy?</h3><p>Nie prosimy o imię, e-mail, pracodawcę, dokładne wynagrodzenie ani inne dane osobowe.</p><h3>Jak liczymy?</h3><p>Wartości sortujemy rosnąco. Pokazujemy medianę oraz kwartyle Q1 i Q3.</p><h3>Token nie jest zabezpieczeniem</h3><p>Każdy, kto zna link, zna token. Nie jest to hasło ani kontrola dostępu.</p><h3>Odporność statystyczna</h3><p>Mediana i kwartyle są mniej wrażliwe na pojedyncze wartości skrajne niż średnia, ale nie chronią przed masowym fałszowaniem danych.</p></section>
+  </main><footer>MVP bez backendu · Kod i obliczenia są dostępne publicznie.</footer>
+  <script>
+    "use strict";
+    // Mock backend: rekordy są przechowywane tylko w pamięci bieżącej karty.
+    const submissions=[]; let activeGroup=null;
+    const nav=[...document.querySelectorAll("nav button")],panels=[...document.querySelectorAll(".panel")];
+    function showSection(id){panels.forEach(p=>p.classList.toggle("active",p.id===id));nav.forEach(b=>b.classList.toggle("active",b.dataset.target===id));}
+    nav.forEach(b=>b.addEventListener("click",()=>showSection(b.dataset.target)));
+
+    // Web Crypto daje losowość, a base36 krótki token o długości 10–12 znaków.
+    function generateToken(){const n=new Uint32Array(2);crypto.getRandomValues(n);return(n[0].toString(36)+n[1].toString(36)).slice(0,12).padEnd(10,"0");}
+    function makeUrl(token){const url=new URL(location.href);url.search="";url.hash="";url.searchParams.set("group",token);return url.toString();}
+    function setGroup(token,description){activeGroup={token,description};document.querySelectorAll("[data-group-only]").forEach(e=>e.hidden=false);document.querySelectorAll("[data-token]").forEach(e=>e.textContent=token);document.querySelectorAll("[data-description]").forEach(e=>e.textContent=description);updateResults();}
+
+    document.querySelector("#create-form").addEventListener("submit",event=>{event.preventDefault();const description=document.querySelector("#description").value.trim();if(!description)return;const token=generateToken(),link=makeUrl(token);setGroup(token,description);document.querySelector("#created-token").textContent=token;document.querySelector("#created-description").textContent=description;const a=document.querySelector("#created-link");a.href=link;a.textContent=link;document.querySelector("#created").hidden=false;history.replaceState({},"",link);});
+    document.querySelector("#copy").addEventListener("click",async()=>{const feedback=document.querySelector("#copy-feedback");try{await navigator.clipboard.writeText(document.querySelector("#created-link").href);feedback.textContent="Link skopiowany.";}catch{feedback.textContent="Nie udało się skopiować. Zaznacz link ręcznie.";}});
+    document.querySelector("#data-form").addEventListener("submit",event=>{event.preventDefault();if(!activeGroup)return;const input=document.querySelector("#deviation"),deviation=Number(input.value);if(!Number.isFinite(deviation)||deviation<-2000||deviation>2000)return;submissions.push({group:activeGroup.token,description:activeGroup.description,deviation,timestamp:Date.now()});input.value="";document.querySelector("#submit-feedback").textContent="Wpis dodany do lokalnego zestawu danych.";updateResults();});
+
+    // Mediana posortowanej tablicy: środkowy element lub średnia dwóch środkowych.
+    function getMedian(sorted){if(!sorted.length)return null;const m=Math.floor(sorted.length/2);return sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2;}
+    // Q1 i Q3 to mediany dolnej i górnej połowy; dla nieparzystej próby pomijamy medianę główną.
+    function getQuartiles(sorted){if(!sorted.length)return{q1:null,q3:null};const m=Math.floor(sorted.length/2),lower=sorted.slice(0,m),upper=sorted.slice(Math.ceil(sorted.length/2));return{q1:lower.length?getMedian(lower):sorted[0],q3:upper.length?getMedian(upper):sorted[0]};}
+    function format(value){return value===null?"—":`${new Intl.NumberFormat("pl-PL",{maximumFractionDigits:1}).format(value)} PLN`;}
+    function updateResults(){if(!activeGroup)return;const values=submissions.filter(x=>x.group===activeGroup.token).map(x=>x.deviation).sort((a,b)=>a-b);const{q1,q3}=getQuartiles(values);document.querySelector("#count").textContent=values.length;document.querySelector("#median").textContent=format(getMedian(values));document.querySelector("#range").textContent=values.length?`${format(q1)} – ${format(q3)}`:"—";document.querySelector("#status").textContent=values.length<5?"Za mało danych":values.length<10?"Wynik orientacyjny":"Wynik stabilizujący się";}
+
+    // Parametr group aktywuje formularz i wyniki. Bez backendu opis zastępuje czytelna etykieta.
+    document.querySelectorAll("[data-group-only]").forEach(e=>e.hidden=true);const token=new URLSearchParams(location.search).get("group")?.trim();if(token)setGroup(token,`Grupa ${token}`);
+  </script>
+</body>
+</html>
