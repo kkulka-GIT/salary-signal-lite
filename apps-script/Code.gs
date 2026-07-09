@@ -6,6 +6,7 @@ const SPREADSHEET_ID = '1VH20mCtdQQbes3sM-158Z8r5Z0Ir8D4QoMjXulsCnHg';
 const GROUPS_SHEET = 'groups';
 const SUBMISSIONS_SHEET = 'submissions';
 const CONFIG_SHEET = 'config';
+const DEFAULT_REFERENCE_CENTER = 10000;
 
 function doGet(e) {
   try {
@@ -44,20 +45,29 @@ function createGroup_(payload) {
   if (description.length > 160) return { ok: false, error: 'DESCRIPTION_TOO_LONG' };
 
   const config = getConfig_();
-  const initialCenter = optionalNumber_(payload.initialCenter, 10000);
+  const referenceCenter = optionalNumber_(payload.reference_center, optionalNumber_(payload.initialCenter, DEFAULT_REFERENCE_CENTER));
   const minDeviation = optionalNumber_(payload.minDeviation, config.defaultMinDeviation);
   const maxDeviation = optionalNumber_(payload.maxDeviation, config.defaultMaxDeviation);
-  if (initialCenter === null || minDeviation === null || maxDeviation === null) return { ok: false, error: 'INVALID_NUMBER' };
+  if (referenceCenter === null || minDeviation === null || maxDeviation === null) return { ok: false, error: 'INVALID_NUMBER' };
   if (minDeviation >= maxDeviation) return { ok: false, error: 'INVALID_DEVIATION_RANGE' };
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     if (findGroup_(token)) return { ok: true, alreadyExists: true };
-    sheet_(GROUPS_SHEET).appendRow([
-      new Date(), token, description, initialCenter, minDeviation, maxDeviation,
-      'web', 'active', String(payload.appVersion || '0.2'), ''
-    ]);
+    appendGroupRow_({
+      created_at: new Date(),
+      group_token: token,
+      reference_center: referenceCenter,
+      group_description: description,
+      initial_center: referenceCenter,
+      min_deviation: minDeviation,
+      max_deviation: maxDeviation,
+      created_by_context: 'web',
+      status: 'active',
+      app_version: String(payload.appVersion || '0.2'),
+      notes: ''
+    });
     return { ok: true, created: true };
   } finally {
     lock.releaseLock();
@@ -135,6 +145,7 @@ function getDataResponse_(token) {
     ok: true,
     group: publicGroup_(group),
     items: acceptedSubmissions_(token),
+    reference_center: group.referenceCenter,
     config: {
       minResultsToShow: config.minResultsToShow,
       stableResultsThreshold: config.stableResultsThreshold
@@ -150,7 +161,8 @@ function findGroup_(token) {
   return {
     token: String(row.group_token),
     description: String(row.group_description || ''),
-    initialCenter: finiteOr_(row.initial_center, 10000),
+    referenceCenter: finiteOr_(row.reference_center, finiteOr_(row.initial_center, DEFAULT_REFERENCE_CENTER)),
+    initialCenter: finiteOr_(row.reference_center, finiteOr_(row.initial_center, DEFAULT_REFERENCE_CENTER)),
     minDeviation: finiteOr_(row.min_deviation, getConfig_().defaultMinDeviation),
     maxDeviation: finiteOr_(row.max_deviation, getConfig_().defaultMaxDeviation),
     status: String(row.status || 'active')
@@ -181,6 +193,25 @@ function getConfig_() {
   };
 }
 
+function appendGroupRow_(valuesByHeader) {
+  const sheet = ensureReferenceCenterColumn_();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (value) { return String(value).trim(); });
+  sheet.appendRow(headers.map(function (header) {
+    return Object.prototype.hasOwnProperty.call(valuesByHeader, header) ? valuesByHeader[header] : "";
+  }));
+}
+
+function ensureReferenceCenterColumn_() {
+  const sheet = sheet_(GROUPS_SHEET);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (value) { return String(value).trim(); });
+  if (headers.indexOf('reference_center') !== -1) return sheet;
+  const tokenIndex = headers.indexOf('group_token');
+  if (tokenIndex === -1) throw new Error('Missing group_token header');
+  sheet.insertColumnAfter(tokenIndex + 1);
+  sheet.getRange(1, tokenIndex + 2).setValue('reference_center');
+  return sheet;
+}
+
 function rowsAsObjects_(sheet) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
@@ -197,6 +228,7 @@ function publicGroup_(group) {
     token: group.token,
     description: group.description,
     initialCenter: group.initialCenter,
+    reference_center: group.referenceCenter,
     minDeviation: group.minDeviation,
     maxDeviation: group.maxDeviation,
     status: group.status
