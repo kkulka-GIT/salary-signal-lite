@@ -100,14 +100,9 @@ function submitDeviation_(payload) {
     rejectReason = rejectReason || 'INVALID_DEVIATION';
   }
 
-  if (accepted) {
-    const config = getConfig_();
-    const min = finiteOr_(group.minDeviation, config.defaultMinDeviation);
-    const max = finiteOr_(group.maxDeviation, config.defaultMaxDeviation);
-    if (deviation < min || deviation > max) {
-      accepted = false;
-      rejectReason = 'DEVIATION_OUT_OF_RANGE';
-    }
+  if (accepted && Math.abs(deviation) > 1000000) {
+    accepted = false;
+    rejectReason = 'DEVIATION_OUT_OF_TECHNICAL_RANGE';
   }
 
   const rawPayload = JSON.stringify(payload);
